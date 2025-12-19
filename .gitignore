@@ -1,0 +1,112 @@
+# Configurador NFS Unificado - .gitignore
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+venv_clean/
+.venv/
+pyvenv.cfg
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Archivos temporales
+*.log
+*.tmp
+*.temp
+test_exports
+*.bak
+*.backup
+
+# Archivos de configuración local
+config.local.py
+settings.local.py
+
+# Logs
+*.log
+logs/
+/var/log/configurador-nfs.log
+
+# Bases de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de respaldo
+*.respaldo.*
+/etc/exports.respaldo*
+
+# Archivos de testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.env.local
+.env.*.local
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Archivos específicos del proyecto
+test_*
+demo_*
+ejemplo_*

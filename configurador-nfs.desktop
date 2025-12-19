@@ -1,0 +1,20 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Configurador NFS
+Name[es]=Configurador NFS
+GenericName=NFS Configuration Tool
+GenericName[es]=Herramienta de Configuración NFS
+Comment=Configure and manage NFS server and client on OpenSUSE
+Comment[es]=Configure y gestione servidor y cliente NFS en OpenSUSE
+Exec=pkexec /usr/local/bin/configurador-nfs
+Icon=network-server
+Terminal=false
+StartupNotify=true
+Categories=System;Settings;Network;FileSystem;
+Keywords=nfs;server;client;network;configuration;opensuse;share;mount;export;
+Keywords[es]=nfs;servidor;cliente;red;configuración;opensuse;compartir;montar;exportar;
+MimeType=
+X-KDE-SubstituteUID=true
+X-GNOME-UsesNotifications=true
+StartupWMClass=configurador-nfs

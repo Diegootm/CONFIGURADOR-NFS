@@ -1,0 +1,30 @@
+# Configurador NFS Integral - Dependencias de Python
+# 
+# Instalación:
+#   pip install -r requirements.txt
+#
+# NOTA: En OpenSUSE es preferible instalar mediante zypper:
+#   sudo zypper install python3-tk
+
+# Tkinter está incluido en la instalación estándar de Python
+# pero en Linux suele ser un paquete separado
+
+# No se requieren dependencias externas de PyPI
+# Este proyecto solo usa bibliotecas estándar de Python:
+#
+# - tkinter (interfaz gráfica)
+# - os (operaciones del sistema)
+# - subprocess (ejecución de comandos)
+# - logging (sistema de logs)
+# - ipaddress (validación de direcciones IP)
+# - shutil (operaciones de archivos)
+# - datetime (marcas de tiempo)
+# - platform (información del sistema)
+# - sys (utilidades del sistema)
+# - hashlib (generación de fsid)
+# - stat (permisos de archivos)
+
+# Si necesitas instalar Tkinter en OpenSUSE:
+# sudo zypper install python3-tk
+
+# Versión mínima de Python requerida: 3.6+
