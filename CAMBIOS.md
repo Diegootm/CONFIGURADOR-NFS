@@ -1,7 +1,7 @@
-# Cambios y Mejoras Realizadas - Configurador NFS v2.0
+# Cambios y Mejoras Realizadas - Configurador NFS v2.1
 
 ## Resumen General
-Se han implementado mejoras significativas en validaciones, compatibilidad con OpenSUSE 15.6 y Python 3.6, así como correcciones importantes para garantizar que las exportaciones se monten correctamente en el equipo.
+Se han implementado mejoras significativas en validaciones, compatibilidad con OpenSUSE 15.6 y Python 3.6, así como correcciones importantes para garantizar que las exportaciones se monten correctamente en el equipo. Versión 2.1 incluye montaje automático local en el servidor.
 
 ## 1. Validaciones Mejoradas
 
@@ -84,6 +84,35 @@ El método de montaje ahora detecta y reporta claramente:
 - Se valida punto de montaje antes de crear directorios
 - Se proporciona feedback claro al usuario sobre qué está mal
 
+## 5. Montaje Automático Local en el Servidor (NUEVO v2.1)
+
+### 5.1 Nueva Funcionalidad
+- **Archivo modificado**: `ui/ventana_principal.py`
+- Se añadió checkbox "Montar en esta máquina" en la pestaña Servidor
+- Permite al administrador del servidor montar automáticamente la carpeta exportada
+
+### 5.2 Características
+- ✅ Checkbox opcional para activar/desactivar montaje local
+- ✅ Campo de entrada para especificar punto de montaje
+- ✅ Botón "Explorar" para seleccionar o crear directorio
+- ✅ Creación automática del punto de montaje si no existe
+- ✅ Usa `mount --bind` (binding mount) en lugar de NFS para montaje local
+- ✅ Valida permisos y reporta errores claramente
+
+### 5.3 Métodos Añadidos
+- `_toggle_punto_montaje()` - Activa/desactiva campo según checkbox
+- `_explorar_punto_montaje_servidor()` - Selecciona punto de montaje
+- `_montar_carpeta_servidor()` - Ejecuta el montaje local con binding mount
+
+### 5.4 Cómo Funciona
+1. Usuario marca "Montar en esta máquina"
+2. Campo de entrada se habilita
+3. Puede escribir ruta o explorar para seleccionar
+4. Al agregar exportación:
+   - Si la ruta no existe → se crea automáticamente
+   - Se ejecuta `mount --bind <ruta_local> <punto_montaje>`
+   - Se reporta éxito/error al usuario
+
 ## 5. Compatibilidad Python 3.6 y OpenSUSE 15.6
 
 ### 5.1 Cambios Implementados
@@ -91,41 +120,49 @@ El método de montaje ahora detecta y reporta claramente:
 - Las excepciones están en el formato correcto para Python 3.6
 - Se mantiene compatibilidad con subprocess.run (disponible en Python 3.6)
 
-### 5.2 Requisitos Comprobados
+### 6.2 Requisitos Comprobados
 El archivo `requeriments.txt` incluye todas las dependencias necesarias:
 ```
 tkinter    # Incluido en Python 3.6
 ```
 
-## 6. Problemas Solucionados
+## 7. Problemas Solucionados
 
-### 6.1 Exportaciones No Se Montaban Automáticamente
+### 7.1 Exportaciones No Se Montaban Automáticamente
 **Problema**: Se exportaban configuraciones pero no se montaban en el equipo
 **Solución**: 
 - Se mejoró significativamente el proceso de montaje en `cliente_nfs.py`
 - Se añadieron reintentos con diferentes versiones de NFS
 - Se mejoró el manejo de errores específicos de OpenSUSE
+- Se añadió montaje automático en el servidor con binding mount
 
-### 6.2 Falta de Validaciones
+### 7.2 Falta de Validaciones
 **Problema**: No había validaciones exhaustivas de opciones NFS
 **Solución**: 
 - Se implementó sistema completo de validaciones de combinaciones no permitidas
 - Se añadieron validaciones obligatorias
 - Se valida en la interfaz gráfica antes de aplicar cambios
 
-### 6.3 No Había Control de Errores
+### 7.3 No Había Control de Errores
 **Problema**: Combinaciones como rw+ro, sync+async, root_squash+no_root_squash se permitían
 **Solución**:
 - Se implementó detección y bloqueo de combinaciones conflictivas
 - Se proporciona feedback claro al usuario sobre qué combinaciones no están permitidas
 
-## 7. Archivos Modificados
+### 7.4 Montaje Manual Complicado
+**Problema**: Usuario tenía que montar manualmente la carpeta en el cliente
+**Solución**:
+- Se añadió opción de montaje automático en el servidor
+- Punto de montaje se crea automáticamente si no existe
+- Interface mejorada con checkbox y campo de entrada
+
+## 8. Archivos Modificados
 
 ### Archivos Core
 1. `utils/validaciones.py` - Validaciones mejoradas
 2. `gestor_nfs.py` - Descripción de opciones actualizada
 3. `cliente_nfs.py` - Montaje mejorado, métodos no necesarios removidos
-4. `ui/ventana_principal.py` - Interfaz mejorada, pestaña transferencias eliminada
+4. `ui/ventana_principal.py` - Interfaz mejorada, pestaña transferencias eliminada, montaje servidor añadido
 
 ### Archivos Sin Cambios
 - `main.py` - Sin cambios necesarios
@@ -137,49 +174,58 @@ tkinter    # Incluido en Python 3.6
 - `ui/tab_cliente.py` - Sin cambios
 - `ui/tabs_transferencia.py` - Sin cambios (será deprecado)
 
-## 8. Instrucciones de Uso
+## 9. Instrucciones de Uso
 
-### Servidor NFS
+### Servidor NFS - Nueva Funcionalidad de Montaje Local (v2.1)
 1. Seleccionar carpeta a exportar (no archivos individuales)
 2. Definir hosts permitidos (ej: 192.168.1.0/24, *)
-3. Seleccionar opciones NFS con validaciones automáticas
-4. Ajustar permisos del filesystem si es necesario
-5. Aplicar cambios con "exportfs -ra"
+3. **[NUEVO]** Marcar "Montar en esta máquina" si desea montaje local automático
+4. **[NUEVO]** Escribir o explorar para seleccionar punto de montaje
+   - Se creará automáticamente si no existe
+5. Seleccionar opciones NFS deseadas (mínimas requeridas, sin validaciones obligatorias)
+6. Ajustar permisos del filesystem si es necesario
+7. Aplicar cambios con "exportfs -ra"
 
 ### Cliente NFS
 1. Introducir IP del servidor
 2. Introducir ruta remota (ej: /home/usuario)
-3. Seleccionar punto de montaje local
+3. Introducir punto de montaje local (o escribir uno nuevo)
 4. El sistema intenta NFS v3 primero, luego sin versión especificada
 5. Una vez montado, acceder a los archivos como carpeta local
 
-## 9. Testing Recomendado
+## 10. Testing Recomendado
 
 Para verificar que todo funciona correctamente:
 
 ```bash
-# En el servidor (como root)
-sudo systemctl start nfs-server
-sudo systemctl enable nfs-server
-exportfs -v  # Verificar exportaciones
+# En el servidor (como root) - Montaje automático
+# La aplicación monta automáticamente con binding mount si está habilitado
+
+# En el servidor - Ver montajes locales
+mount | grep nfs
 
 # En el cliente (como root)
 mount -t nfs -o vers=3 192.168.1.X:/ruta/remota /mnt/local
 df -h  # Verificar montaje
 ls -la /mnt/local  # Ver contenido
 
-# Desmontar
+# Desmontar servidor
+umount /mnt/nfs_local
+
+# Desmontar cliente
 umount /mnt/local
 ```
 
-## 10. Notas Importantes
+## 11. Notas Importantes
 
 - **Permisos**: La aplicación requiere permisos de root para funcionamiento completo
 - **NFS Solo Carpetas**: No compartir archivos individuales, NFS está diseñado para directorios
+- **Montaje Local Servidor**: Usa `mount --bind` (no requiere servicios NFS adicionales)
 - **Compatibilidad**: Probado en OpenSUSE 15.6 con Python 3.6
 - **Errores de Montaje**: Verificar que el servidor NFS está activo y la IP es accesible
+- **Validaciones Relajadas**: Ahora puede seleccionar solo las opciones que necesita
 
-## 11. Futuras Mejoras Sugeridas
+## 12. Futuras Mejoras Sugeridas
 
 1. Interfaz gráfica para gestionar grupos/UIDs para squashing
 2. Soporte para NFSv4

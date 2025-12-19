@@ -104,11 +104,25 @@ class VentanaPrincipal:
         ttk.Label(frame_agregar, text="Ejemplos: 192.168.1.100, 192.168.1.0/24, *", 
                  foreground=TemaColores.COLOR_TEXTO_MUTED).grid(row=2, column=1, sticky='w')
         
+        # Montaje local opcional
+        self.var_montar_local = tk.BooleanVar(value=False)
+        chk_montar = ttk.Checkbutton(frame_agregar, text="Montar en esta máquina", variable=self.var_montar_local,
+                                     command=self._toggle_punto_montaje)
+        chk_montar.grid(row=3, column=0, sticky='w', pady=5)
+        
+        ttk.Label(frame_agregar, text="Punto de Montaje Local:").grid(row=3, column=0, sticky='w', pady=5, padx=(180, 0))
+        self.entrada_punto_montaje_servidor = ttk.Entry(frame_agregar, width=30)
+        self.entrada_punto_montaje_servidor.grid(row=3, column=1, sticky='ew', pady=5, padx=5)
+        self.entrada_punto_montaje_servidor.insert(0, "/mnt/nfs_local")
+        self.entrada_punto_montaje_servidor.config(state='disabled')
+        
+        crear_boton(frame_agregar, "Explorar...", self._explorar_punto_montaje_servidor, tipo='info', width=12).grid(row=3, column=2, padx=5)
+        
         frame_agregar.columnconfigure(1, weight=1)
         
         # Opciones NFS
         frame_opciones = ttk.LabelFrame(frame_agregar, text="Opciones NFS", padding=10)
-        frame_opciones.grid(row=3, column=0, columnspan=3, sticky='ew', pady=10)
+        frame_opciones.grid(row=4, column=0, columnspan=3, sticky='ew', pady=10)
         
         self.opciones_vars = {}
         opciones_comunes = [
@@ -134,7 +148,7 @@ class VentanaPrincipal:
         
         # Botón agregar
         crear_boton(frame_agregar, "{0} Agregar Exportación".format(Iconos.EXITO), 
-                   self._agregar_exportacion_servidor, tipo='success').grid(row=4, column=0, columnspan=3, pady=10)
+                   self._agregar_exportacion_servidor, tipo='success').grid(row=5, column=0, columnspan=3, pady=10)
         
         # Sección 2: Exportaciones actuales
         frame_lista = crear_frame_card(self.tab_servidor, title="2. Exportaciones Actuales")
@@ -169,6 +183,21 @@ class VentanaPrincipal:
         if ruta:
             self.entrada_ruta_servidor.delete(0, tk.END)
             self.entrada_ruta_servidor.insert(0, ruta)
+    
+    def _toggle_punto_montaje(self):
+        """Activa/desactiva el campo de punto de montaje"""
+        estado = 'normal' if self.var_montar_local.get() else 'disabled'
+        self.entrada_punto_montaje_servidor.config(state=estado)
+    
+    def _explorar_punto_montaje_servidor(self):
+        """Explorar o crear punto de montaje local"""
+        punto = filedialog.askdirectory(title="Seleccione o cree carpeta para montaje local")
+        
+        if punto:
+            self.entrada_punto_montaje_servidor.config(state='normal')
+            self.entrada_punto_montaje_servidor.delete(0, tk.END)
+            self.entrada_punto_montaje_servidor.insert(0, punto)
+            self.entrada_punto_montaje_servidor.config(state='disabled' if not self.var_montar_local.get() else 'normal')
     
     def _agregar_exportacion_servidor(self):
         """Agrega una nueva exportación NFS"""
@@ -206,15 +235,54 @@ class VentanaPrincipal:
         
         # Agregar configuración
         if self.gestor_nfs.agregar_configuracion(ruta, hosts, opciones, ajustar):
+            mensajes = ["Exportación agregada correctamente\n"]
+            
+            # Si se solicita montaje local
+            if self.var_montar_local.get():
+                punto_montaje = self.entrada_punto_montaje_servidor.get().strip()
+                if punto_montaje:
+                    resultado_montaje = self._montar_carpeta_servidor(ruta, punto_montaje)
+                    mensajes.append(resultado_montaje)
+            
             messagebox.showinfo(
                 "Éxito",
-                "Exportación agregada correctamente\n\n" +
-                "IMPORTANTE: Debe aplicar los cambios para que tengan efecto"
+                "\n".join(mensajes) + "\n\nIMPORTANTE: Debe aplicar los cambios para que tengan efecto"
             )
             self._actualizar_exportaciones()
             self.entrada_ruta_servidor.delete(0, tk.END)
+            self.entrada_punto_montaje_servidor.config(state='normal')
+            self.entrada_punto_montaje_servidor.delete(0, tk.END)
+            self.entrada_punto_montaje_servidor.insert(0, "/mnt/nfs_local")
+            self.entrada_punto_montaje_servidor.config(state='disabled')
+            self.var_montar_local.set(False)
         else:
             messagebox.showerror("Error", "No se pudo agregar la exportación")
+    
+    
+    def _montar_carpeta_servidor(self, ruta_local, punto_montaje):
+        """Monta la carpeta exportada en el punto de montaje local del servidor"""
+        try:
+            # Crear punto de montaje si no existe
+            if not os.path.exists(punto_montaje):
+                try:
+                    os.makedirs(punto_montaje, mode=0o755)
+                    logger.info("Punto de montaje creado: {0}".format(punto_montaje))
+                except Exception as e:
+                    return "Error creando punto de montaje: {0}".format(str(e))
+            
+            # En el servidor, simplemente crear un binding mount (bind mount)
+            # Esto vincula la carpeta al punto de montaje sin necesidad de NFS
+            comando = "mount --bind {0} {1}".format(ruta_local, punto_montaje)
+            resultado = self.gestor_nfs._run_command(comando)
+            
+            if resultado["success"]:
+                logger.exito("Carpeta montada en {0}".format(punto_montaje))
+                return "Carpeta montada en: {0}".format(punto_montaje)
+            else:
+                logger.warning("No se pudo montar localmente, pero la exportación está configurada")
+                return "Exportación lista (montaje local no disponible: {0})".format(resultado['stderr'])
+        except Exception as e:
+            return "Error en montaje local: {0}".format(str(e))
     
     def _actualizar_exportaciones(self):
         """Actualiza la lista de exportaciones"""

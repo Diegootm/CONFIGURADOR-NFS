@@ -105,20 +105,30 @@ Busca "Configurador NFS" en el menú de aplicaciones de tu escritorio.
 
 ## 📖 Guía de Uso
 
-### Configurar Servidor NFS
+### Configurar Servidor NFS (con Montaje Local Automático)
 
 1. Ve a la pestaña **"Servidor NFS"**
 2. Haz clic en "Explorar" para seleccionar una **carpeta** (solo carpetas, no archivos)
 3. Especifica los hosts permitidos (ej: `192.168.1.0/24` o `*`)
-4. Selecciona las opciones NFS deseadas (validadas automáticamente)
-5. Haz clic en "Agregar Exportación"
-6. Haz clic en "Aplicar Cambios" para activar
+4. **[NUEVO]** Marca **"Montar en esta máquina"** si deseas montar automáticamente en tu servidor
+5. **[NUEVO]** Especifica el punto de montaje local (se creará automáticamente si no existe)
+   - Puedes escribir la ruta o usar "Explorar" para seleccionar/crear
+6. Selecciona las opciones NFS deseadas (solo las que necesites)
+7. Haz clic en "Agregar Exportación"
+8. Haz clic en "Aplicar Cambios" para activar
+
+**Ejemplo de flujo**:
+- Carpeta a compartir: `/home/usuario/documentos`
+- Hosts permitidos: `192.168.1.0/24`
+- Marcar: "Montar en esta máquina"
+- Punto de montaje: `/mnt/documentos_local` (se creará si no existe)
+- Opciones: Seleccionar solo `rw` si deseas
 
 ### Montar Recurso NFS (Cliente)
 
 1. Ve a la pestaña **"Cliente NFS"**
 2. Ingresa la IP del servidor NFS
-3. Especifica la ruta remota a montar (ej: `/home/usuario`)
+3. Especifica la ruta remota a montar (ej: `/home/usuario/documentos`)
 4. Define el punto de montaje local (ej: `/mnt/nfs_compartido`)
 5. Haz clic en "Montar"
 6. El sistema intenta automáticamente NFS v3 para compatibilidad con OpenSUSE 15.6
@@ -133,7 +143,15 @@ Una vez montado, simplemente:
 
 ## ⚙️ Configuración Recomendada
 
-### Para Carpetas Compartidas (Recomendado)
+### Opción Más Simple (Recomendada para Empezar)
+```
+Opciones: rw
+```
+- Solo lectura/escritura
+- Las otras opciones usan valores por defecto de NFS
+- Perfecto para compartir carpetas internas
+
+### Para Carpetas Compartidas (Completa)
 ```
 Opciones: rw, sync, secure, root_squash, no_subtree_check
 ```
@@ -145,19 +163,23 @@ Opciones: rw, sync, secure, root_squash, no_subtree_check
 
 ### Para Solo Lectura
 ```
-Opciones: ro, sync, secure, root_squash, no_subtree_check
+Opciones: ro
+```
+o
+```
+Opciones: ro, sync, secure, root_squash
 ```
 
 ### Para Máxima Compatibilidad
 ```
-Opciones: rw, sync, insecure, root_squash, no_subtree_check
+Opciones: rw, async, insecure
 ```
 Útil si hay problemas de conectividad con clientes viejos.
 
-## ⚠️ Combinaciones NO Permitidas
+## ⚠️ Lo Que No Puedes Hacer
 
-La aplicación bloquea automáticamente estas combinaciones:
-- ✗ No puedes usar `rw` y `ro` al mismo tiempo
+La aplicación previene estas combinaciones conflictivas:
+- ✗ No puedes usar `rw` y `ro` al mismo tiempo (elige uno)
 - ✗ No puedes usar `sync` y `async` al mismo tiempo  
 - ✗ No puedes usar `root_squash` y `no_root_squash` al mismo tiempo
 - ✗ No puedes usar `secure` e `insecure` al mismo tiempo
