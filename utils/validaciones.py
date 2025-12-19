@@ -169,17 +169,9 @@ def validar_opciones_nfs(opciones):
         if len(opciones_presentes) > 1:
             return (False, mensaje_error)
     
-    # Validar que haya un modo de acceso definido
-    if 'rw' not in opciones_parseadas and 'ro' not in opciones_parseadas:
-        return (False, "Debe seleccionar un modo de acceso: 'rw' (lectura/escritura) o 'ro' (solo lectura)")
-    
-    # Validar que haya un modo de sincronización definido
-    if 'sync' not in opciones_parseadas and 'async' not in opciones_parseadas:
-        return (False, "Debe seleccionar modo de sincronización: 'sync' o 'async'")
-    
-    # Validar que haya manejo de root definido
-    if 'root_squash' not in opciones_parseadas and 'no_root_squash' not in opciones_parseadas:
-        return (False, "Debe definir mapeo de root: 'root_squash' o 'no_root_squash'")
+    # Nota: Se permite al usuario seleccionar solo las opciones que desee
+    # El servidor NFS usará sus valores por defecto para opciones no especificadas
+    # Esto da más flexibilidad al usuario
     
     return (True, "Opciones válidas")
 
@@ -219,6 +211,7 @@ def validar_espacio_disco(ruta, tamano_necesario_mb=100):
 def validar_punto_montaje(punto_montaje):
     """
     Valida que el punto de montaje sea válido
+    Nota: Si no existe, se intentará crear
     """
     if not punto_montaje or not punto_montaje.strip():
         return (False, "El punto de montaje está vacío")
@@ -227,7 +220,7 @@ def validar_punto_montaje(punto_montaje):
     
     # Debe ser una ruta absoluta
     if not punto_montaje.startswith('/'):
-        return (False, "El punto de montaje debe ser una ruta absoluta")
+        return (False, "El punto de montaje debe ser una ruta absoluta (empezar con /)")
     
     # Si existe, debe ser un directorio
     if os.path.exists(punto_montaje) and not os.path.isdir(punto_montaje):

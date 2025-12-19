@@ -163,16 +163,8 @@ class VentanaPrincipal:
         self._actualizar_exportaciones()
     
     def _explorar_ruta_servidor(self):
-        """Explorar carpeta o archivo para exportar"""
-        tipo = messagebox.askquestion(
-            "Tipo de Recurso",
-            "¿Desea exportar una CARPETA completa?\n\n(Seleccione 'No' para exportar un archivo individual)"
-        )
-        
-        if tipo == 'yes':
-            ruta = filedialog.askdirectory(title="Seleccione carpeta a exportar")
-        else:
-            ruta = filedialog.askopenfilename(title="Seleccione archivo a exportar")
+        """Explorar carpeta para exportar (solo directorios permitidos)"""
+        ruta = filedialog.askdirectory(title="Seleccione CARPETA para exportar (NFS solo soporta directorios)")
         
         if ruta:
             self.entrada_ruta_servidor.delete(0, tk.END)
@@ -187,14 +179,19 @@ class VentanaPrincipal:
             messagebox.showerror("Error", "Debe completar todos los campos")
             return
         
+        # Validar que la ruta sea un directorio
+        if not os.path.isdir(ruta):
+            messagebox.showerror("Error", "La ruta debe ser un DIRECTORIO. NFS no soporta exportación de archivos individuales.")
+            return
+        
         # Recopilar opciones seleccionadas
         opciones = [opt for opt, var in self.opciones_vars.items() if var.get()]
         
         if not opciones:
-            messagebox.showwarning("Advertencia", "No seleccionó ninguna opción NFS")
+            messagebox.showwarning("Advertencia", "Debe seleccionar al menos una opción NFS")
             return
         
-        # Validar combinaciones de opciones
+        # Validar solo combinaciones conflictivas
         valida, mensaje_validacion = validar_opciones_nfs(opciones)
         if not valida:
             messagebox.showerror("Error de Validación", mensaje_validacion)
@@ -281,9 +278,14 @@ class VentanaPrincipal:
         self.entrada_ruta_remota.grid(row=1, column=1, sticky='ew', pady=5, padx=5)
         
         ttk.Label(frame_montar, text="Punto de Montaje:").grid(row=2, column=0, sticky='w', pady=5)
-        self.entrada_punto_montaje = ttk.Entry(frame_montar, width=30)
-        self.entrada_punto_montaje.grid(row=2, column=1, sticky='ew', pady=5, padx=5)
+        frame_punto_montaje = tk.Frame(frame_montar, bg=TemaColores.COLOR_FONDO_CARD)
+        frame_punto_montaje.grid(row=2, column=1, sticky='ew', pady=5, padx=5)
+        
+        self.entrada_punto_montaje = ttk.Entry(frame_punto_montaje, width=25)
+        self.entrada_punto_montaje.pack(side='left', fill='x', expand=True, padx=(0, 5))
         self.entrada_punto_montaje.insert(0, "/mnt/nfs_compartido")
+        
+        crear_boton(frame_punto_montaje, "Explorar...", self._explorar_punto_montaje, tipo='info', width=12).pack(side='right')
         
         frame_montar.columnconfigure(1, weight=1)
         
@@ -311,6 +313,13 @@ class VentanaPrincipal:
         self.texto_cliente = crear_text_widget(frame_resultados, height=15)
         self.texto_cliente.pack(fill='both', expand=True)
     
+    def _explorar_punto_montaje(self):
+        """Permite seleccionar o crear punto de montaje"""
+        punto = filedialog.askdirectory(title="Seleccione o cree el punto de montaje")
+        if punto:
+            self.entrada_punto_montaje.delete(0, tk.END)
+            self.entrada_punto_montaje.insert(0, punto)
+    
     def _montar_recurso(self):
         """Monta el recurso NFS con validaciones adicionales"""
         ip = self.entrada_ip_cliente.get().strip()
@@ -323,17 +332,20 @@ class VentanaPrincipal:
             return
         
         # Validar formato de IP
-        from utils.validaciones import validar_ip, validar_punto_montaje
+        from utils.validaciones import validar_ip
         valida_ip, msg_ip = validar_ip(ip)
         if not valida_ip:
             messagebox.showerror("Error de IP", msg_ip)
             return
         
-        # Validar punto de montaje
-        valido_pm, msg_pm = validar_punto_montaje(punto_montaje)
-        if not valido_pm:
-            messagebox.showerror("Error de Montaje", msg_pm)
-            return
+        # Crear punto de montaje si no existe
+        if not os.path.exists(punto_montaje):
+            try:
+                os.makedirs(punto_montaje)
+                self._actualizar_texto_cliente("[INFO] Punto de montaje creado: {0}".format(punto_montaje))
+            except Exception as e:
+                messagebox.showerror("Error", "No se pudo crear el punto de montaje: {0}".format(str(e)))
+                return
         
         self.cliente_nfs.punto_montaje = punto_montaje
         resultado = self.cliente_nfs.montar_recurso(ip, ruta_remota)

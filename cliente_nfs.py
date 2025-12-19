@@ -61,12 +61,14 @@ class ClienteNFS:
             logger.error("Punto de montaje inválido: {0}".format(mensaje_pm))
             return {"success": False, "message": "[ERROR] {0}".format(mensaje_pm)}
         
-        # Crear directorio si no existe
+        # Crear directorio si no existe (usando Python en lugar de comando del sistema)
         if not os.path.exists(self.punto_montaje):
-            create_dir_result = self._run_command("mkdir -p {0}".format(self.punto_montaje))
-            if not create_dir_result["success"]:
-                logger.error("Error creando punto de montaje: {0}".format(create_dir_result['stderr']))
-                return {"success": False, "message": "[ERROR] Al crear punto de montaje: {0}".format(create_dir_result['stderr'])}
+            try:
+                os.makedirs(self.punto_montaje)
+                logger.info("Punto de montaje creado: {0}".format(self.punto_montaje))
+            except Exception as e:
+                logger.error("Error creando punto de montaje: {0}".format(str(e)))
+                return {"success": False, "message": "[ERROR] No se pudo crear el punto de montaje: {0}".format(str(e))}
         
         # Verificar si ya está montado
         if os.path.ismount(self.punto_montaje):
