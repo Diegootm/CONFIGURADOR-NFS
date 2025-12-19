@@ -108,9 +108,9 @@ Busca "Configurador NFS" en el menú de aplicaciones de tu escritorio.
 ### Configurar Servidor NFS
 
 1. Ve a la pestaña **"Servidor NFS"**
-2. Haz clic en "Explorar" para seleccionar una carpeta o archivo
+2. Haz clic en "Explorar" para seleccionar una **carpeta** (solo carpetas, no archivos)
 3. Especifica los hosts permitidos (ej: `192.168.1.0/24` o `*`)
-4. Selecciona las opciones NFS deseadas
+4. Selecciona las opciones NFS deseadas (validadas automáticamente)
 5. Haz clic en "Agregar Exportación"
 6. Haz clic en "Aplicar Cambios" para activar
 
@@ -118,33 +118,51 @@ Busca "Configurador NFS" en el menú de aplicaciones de tu escritorio.
 
 1. Ve a la pestaña **"Cliente NFS"**
 2. Ingresa la IP del servidor NFS
-3. Especifica la ruta remota a montar
-4. Define el punto de montaje local
+3. Especifica la ruta remota a montar (ej: `/home/usuario`)
+4. Define el punto de montaje local (ej: `/mnt/nfs_compartido`)
 5. Haz clic en "Montar"
+6. El sistema intenta automáticamente NFS v3 para compatibilidad con OpenSUSE 15.6
 
-### Transferir Archivos
+### Acceder a Archivos Compartidos
 
-1. Monta un recurso NFS primero (pestaña Cliente)
-2. Ve a la pestaña **"Transferencias"**
-3. Para enviar: Usa "Seleccionar Archivos" o "Seleccionar Carpeta"
-4. Para recibir: Haz clic en "Actualizar Lista" y selecciona archivos
+Una vez montado, simplemente:
+1. Accede a los archivos como si fueran una carpeta local
+2. Copiar/mover archivos usando el navegador de archivos
+3. Trabajar con los archivos como si estuvieran en tu máquina
+
 
 ## ⚙️ Configuración Recomendada
 
-### Para Carpetas Compartidas
+### Para Carpetas Compartidas (Recomendado)
 ```
-Opciones: rw, sync, no_subtree_check, root_squash
+Opciones: rw, sync, secure, root_squash, no_subtree_check
 ```
-
-### Para Archivos Individuales
-```
-Opciones: rw, sync, no_subtree_check, fsid=<auto>
-```
+- `rw`: Lectura/Escritura
+- `sync`: Cambios inmediatos en disco (más seguro)
+- `secure`: Solo puertos < 1024
+- `root_squash`: Root remoto → usuario anónimo (seguro)
+- `no_subtree_check`: Mejor rendimiento
 
 ### Para Solo Lectura
 ```
-Opciones: ro, sync, no_subtree_check, root_squash
+Opciones: ro, sync, secure, root_squash, no_subtree_check
 ```
+
+### Para Máxima Compatibilidad
+```
+Opciones: rw, sync, insecure, root_squash, no_subtree_check
+```
+Útil si hay problemas de conectividad con clientes viejos.
+
+## ⚠️ Combinaciones NO Permitidas
+
+La aplicación bloquea automáticamente estas combinaciones:
+- ✗ No puedes usar `rw` y `ro` al mismo tiempo
+- ✗ No puedes usar `sync` y `async` al mismo tiempo  
+- ✗ No puedes usar `root_squash` y `no_root_squash` al mismo tiempo
+- ✗ No puedes usar `secure` e `insecure` al mismo tiempo
+- ✗ No puedes usar `all_squash` y `no_all_squash` al mismo tiempo
+- ✗ No puedes usar `subtree_check` y `no_subtree_check` al mismo tiempo
 
 ## 🔥 Configuración del Firewall
 

@@ -38,7 +38,8 @@ class GestorNFS:
             'no_subtree_check': 'Desactiva verificación de subdirectorios (más rápido)',
             'subtree_check': 'Verifica permisos en subdirectorios (más seguro)',
             'insecure': 'Permite conexiones desde puertos > 1024',
-            'secure': 'Solo permite conexiones desde puertos < 1024',
+            'secure': 'Solo permite conexiones desde puertos < 1024 (más seguro)',
+            'no_secure': 'Alias de insecure - Permite puertos > 1024',
             'anonuid': 'UID del usuario anónimo (ejemplo: anonuid=1000)',
             'anongid': 'GID del grupo anónimo (ejemplo: anongid=1000)',
             'fsid': 'ID único del filesystem (requerido para archivos)'

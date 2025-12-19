@@ -118,17 +118,31 @@ def validar_red(hosts):
 
 def validar_opciones_nfs(opciones):
     """
-    Valida que las opciones NFS sean correctas
+    Valida que las opciones NFS sean correctas y detecta combinaciones no permitidas.
+    Retorna (es_valida, mensaje)
+    
+    Combinaciones NO permitidas:
+    - rw y ro (lectura/escritura vs solo lectura)
+    - sync y async (sincronizado vs asincrónico)
+    - root_squash y no_root_squash (mapear root vs no mapear)
+    - all_squash y no_all_squash (mapear todos vs no mapear)
+    - secure e insecure (puertos seguros vs inseguros)
     """
     opciones_validas = {
         'ro', 'rw', 'sync', 'async', 'no_root_squash', 'root_squash',
         'all_squash', 'no_subtree_check', 'subtree_check', 'insecure',
-        'secure', 'anonuid', 'anongid', 'fsid', 'no_all_squash'
+        'secure', 'anonuid', 'anongid', 'fsid', 'no_all_squash',
+        'no_secure'
     }
     
     if not isinstance(opciones, list):
         return (False, "Las opciones deben ser una lista")
     
+    if not opciones:
+        return (False, "Debe seleccionar al menos una opción NFS")
+    
+    # Validar que cada opción sea válida
+    opciones_parseadas = []
     for opt in opciones:
         if '=' in opt:
             clave = opt.split('=', 1)[0]
@@ -137,6 +151,35 @@ def validar_opciones_nfs(opciones):
         
         if clave not in opciones_validas:
             return (False, "Opción inválida: {0}".format(opt))
+        
+        opciones_parseadas.append(clave)
+    
+    # Detectar combinaciones no permitidas
+    conflictos = [
+        (['rw', 'ro'], "No puede usar 'rw' y 'ro' al mismo tiempo"),
+        (['sync', 'async'], "No puede usar 'sync' y 'async' al mismo tiempo"),
+        (['root_squash', 'no_root_squash'], "No puede usar 'root_squash' y 'no_root_squash' al mismo tiempo"),
+        (['all_squash', 'no_all_squash'], "No puede usar 'all_squash' y 'no_all_squash' al mismo tiempo"),
+        (['secure', 'insecure'], "No puede usar 'secure' e 'insecure' al mismo tiempo"),
+        (['subtree_check', 'no_subtree_check'], "No puede usar 'subtree_check' y 'no_subtree_check' al mismo tiempo"),
+    ]
+    
+    for opciones_conflictivas, mensaje_error in conflictos:
+        opciones_presentes = [o for o in opciones_conflictivas if o in opciones_parseadas]
+        if len(opciones_presentes) > 1:
+            return (False, mensaje_error)
+    
+    # Validar que haya un modo de acceso definido
+    if 'rw' not in opciones_parseadas and 'ro' not in opciones_parseadas:
+        return (False, "Debe seleccionar un modo de acceso: 'rw' (lectura/escritura) o 'ro' (solo lectura)")
+    
+    # Validar que haya un modo de sincronización definido
+    if 'sync' not in opciones_parseadas and 'async' not in opciones_parseadas:
+        return (False, "Debe seleccionar modo de sincronización: 'sync' o 'async'")
+    
+    # Validar que haya manejo de root definido
+    if 'root_squash' not in opciones_parseadas and 'no_root_squash' not in opciones_parseadas:
+        return (False, "Debe definir mapeo de root: 'root_squash' o 'no_root_squash'")
     
     return (True, "Opciones válidas")
 

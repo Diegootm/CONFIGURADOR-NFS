@@ -8,8 +8,8 @@ import os
 
 from gestor_nfs import GestorNFS
 from cliente_nfs import ClienteNFS
-from transferencia import TransferenciaNFS
 from utils.logger import logger
+from utils.validaciones import validar_opciones_nfs
 from .temas import (
     TemaColores, configurar_estilos, crear_boton,
     crear_listbox_personalizado, crear_text_widget,
@@ -30,7 +30,6 @@ class VentanaPrincipal:
         # Inicializar componentes
         self.gestor_nfs = GestorNFS()
         self.cliente_nfs = ClienteNFS()
-        self.transferencia = None
         
         # Variables de estado
         self.recurso_montado = False
@@ -78,11 +77,6 @@ class VentanaPrincipal:
         self.tab_cliente = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.tab_cliente, text='{0} Cliente NFS'.format(Iconos.CLIENTE))
         self._crear_tab_cliente()
-        
-        # Pestaña 3: Transferencia de Archivos
-        self.tab_transferencia = ttk.Frame(self.notebook, padding=10)
-        self.notebook.add(self.tab_transferencia, text='{0} Transferencias'.format(Iconos.COMPARTIR))
-        self._crear_tab_transferencia()
     
     # ============== PESTAÑA SERVIDOR NFS ==============
     
@@ -121,6 +115,7 @@ class VentanaPrincipal:
             ('rw', 'Lectura/Escritura'), ('ro', 'Solo Lectura'),
             ('sync', 'Sincronizado'), ('async', 'Asíncrono'),
             ('root_squash', 'Mapear root'), ('no_root_squash', 'Root sin mapear'),
+            ('secure', 'Puertos seguros (<1024)'), ('insecure', 'Puertos inseguros (>1024)'),
             ('no_subtree_check', 'Sin verificación subdirectorios')
         ]
         
@@ -133,6 +128,8 @@ class VentanaPrincipal:
         # Valores por defecto recomendados
         self.opciones_vars['rw'].set(True)
         self.opciones_vars['sync'].set(True)
+        self.opciones_vars['secure'].set(True)
+        self.opciones_vars['root_squash'].set(True)
         self.opciones_vars['no_subtree_check'].set(True)
         
         # Botón agregar
@@ -195,6 +192,12 @@ class VentanaPrincipal:
         
         if not opciones:
             messagebox.showwarning("Advertencia", "No seleccionó ninguna opción NFS")
+            return
+        
+        # Validar combinaciones de opciones
+        valida, mensaje_validacion = validar_opciones_nfs(opciones)
+        if not valida:
+            messagebox.showerror("Error de Validación", mensaje_validacion)
             return
         
         # Preguntar si desea ajustar permisos
@@ -309,13 +312,27 @@ class VentanaPrincipal:
         self.texto_cliente.pack(fill='both', expand=True)
     
     def _montar_recurso(self):
-        """Monta el recurso NFS"""
+        """Monta el recurso NFS con validaciones adicionales"""
         ip = self.entrada_ip_cliente.get().strip()
         ruta_remota = self.entrada_ruta_remota.get().strip()
         punto_montaje = self.entrada_punto_montaje.get().strip()
         
+        # Validaciones básicas
         if not all([ip, ruta_remota, punto_montaje]):
             messagebox.showerror("Error", "Complete todos los campos")
+            return
+        
+        # Validar formato de IP
+        from utils.validaciones import validar_ip, validar_punto_montaje
+        valida_ip, msg_ip = validar_ip(ip)
+        if not valida_ip:
+            messagebox.showerror("Error de IP", msg_ip)
+            return
+        
+        # Validar punto de montaje
+        valido_pm, msg_pm = validar_punto_montaje(punto_montaje)
+        if not valido_pm:
+            messagebox.showerror("Error de Montaje", msg_pm)
             return
         
         self.cliente_nfs.punto_montaje = punto_montaje
@@ -329,7 +346,6 @@ class VentanaPrincipal:
                 text="{0} Montado en: {1}".format(Iconos.MONTADO, punto_montaje),
                 bg=TemaColores.COLOR_MONTADO
             )
-            self.transferencia = TransferenciaNFS(punto_montaje)
             self._actualizar_barra_estado("Recurso montado correctamente", 'exito')
         else:
             self._actualizar_barra_estado("Error al montar recurso", 'error')
@@ -345,7 +361,6 @@ class VentanaPrincipal:
                 text="{0} No montado".format(Iconos.DESMONTADO),
                 bg=TemaColores.COLOR_DESMONTADO
             )
-            self.transferencia = None
             self._actualizar_barra_estado("Recurso desmontado", 'info')
     
     def _ver_contenido_remoto(self):
@@ -372,145 +387,6 @@ class VentanaPrincipal:
             self.texto_cliente.tag_add('warning', '1.0', '1.end')
         
         self.texto_cliente.config(state='disabled')
-    
-    # ============== PESTAÑA TRANSFERENCIAS ==============
-    
-    def _crear_tab_transferencia(self):
-        """Crea la pestaña de transferencias"""
-        # Frame dividido en dos columnas
-        frame_izq = crear_frame_card(self.tab_transferencia, title="{0} Enviar Archivos".format(Iconos.COMPARTIR))
-        frame_izq.pack(side='left', fill='both', expand=True, padx=(0, 5))
-        
-        frame_der = crear_frame_card(self.tab_transferencia, title="{0} Recibir Archivos".format(Iconos.RECIBIR))
-        frame_der.pack(side='right', fill='both', expand=True, padx=(5, 0))
-        
-        # === ENVIAR ARCHIVOS ===
-        crear_boton(frame_izq, "{0} Seleccionar Archivos".format(Iconos.ARCHIVO), 
-                   self._enviar_archivos, tipo='primary').pack(pady=5, fill='x')
-        crear_boton(frame_izq, "{0} Seleccionar Carpeta".format(Iconos.CARPETA), 
-                   self._enviar_carpeta, tipo='primary').pack(pady=5, fill='x')
-        
-        ttk.Separator(frame_izq, orient='horizontal').pack(fill='x', pady=10)
-        
-        ttk.Label(frame_izq, text="Archivos enviados recientemente:").pack(anchor='w', pady=5)
-        
-        self.lista_enviados, scroll_env = crear_listbox_personalizado(frame_izq, height=12)
-        self.lista_enviados.pack(fill='both', expand=True, pady=5)
-        
-        # === RECIBIR ARCHIVOS ===
-        crear_boton(frame_der, "{0} Actualizar Lista".format(Iconos.REFRESH), 
-                   self._actualizar_lista_remotos, tipo='info').pack(pady=5, fill='x')
-        
-        ttk.Label(frame_der, text="Archivos disponibles en el recurso:").pack(anchor='w', pady=5)
-        
-        self.lista_remotos, scroll_rem = crear_listbox_personalizado(frame_der, height=12, selectmode='multiple')
-        self.lista_remotos.pack(fill='both', expand=True, pady=5)
-        
-        ttk.Label(frame_der, text="Destino local:").pack(anchor='w', pady=5)
-        
-        frame_destino = tk.Frame(frame_der, bg=TemaColores.COLOR_FONDO_CARD)
-        frame_destino.pack(fill='x', pady=5)
-        
-        self.entrada_destino_local = ttk.Entry(frame_destino, width=30)
-        self.entrada_destino_local.pack(side='left', fill='x', expand=True, padx=(0, 5))
-        self.entrada_destino_local.insert(0, os.path.expanduser("~/Descargas"))
-        
-        crear_boton(frame_destino, "...", self._explorar_destino, tipo='secondary', width=3).pack(side='right')
-        
-        crear_boton(frame_der, "{0} Recibir Seleccionados".format(Iconos.RECIBIR), 
-                   self._recibir_archivos, tipo='success').pack(pady=10, fill='x')
-    
-    def _enviar_archivos(self):
-        """Envía archivos seleccionados"""
-        if not self.recurso_montado or not self.transferencia:
-            messagebox.showwarning("Advertencia", "Primero debe montar un recurso NFS")
-            return
-        
-        archivos = filedialog.askopenfilenames(title="Seleccione archivos para enviar")
-        if not archivos:
-            return
-        
-        resultado = self.transferencia.enviar_multiples(archivos)
-        
-        if resultado['success']:
-            for archivo in archivos:
-                self.lista_enviados.insert(0, os.path.basename(archivo))
-            messagebox.showinfo("Éxito", resultado['message'])
-            self._actualizar_barra_estado("Archivos enviados", 'exito')
-        else:
-            messagebox.showerror("Error", resultado['message'])
-    
-    def _enviar_carpeta(self):
-        """Envía una carpeta completa"""
-        if not self.recurso_montado or not self.transferencia:
-            messagebox.showwarning("Advertencia", "Primero debe montar un recurso NFS")
-            return
-        
-        carpeta = filedialog.askdirectory(title="Seleccione carpeta para enviar")
-        if not carpeta:
-            return
-        
-        resultado = self.transferencia.enviar_directorio(carpeta)
-        
-        if resultado['success']:
-            self.lista_enviados.insert(0, "{0} (carpeta)".format(os.path.basename(carpeta)))
-            messagebox.showinfo("Éxito", resultado['message'])
-            self._actualizar_barra_estado("Carpeta enviada", 'exito')
-        else:
-            messagebox.showerror("Error", resultado['message'])
-    
-    def _actualizar_lista_remotos(self):
-        """Actualiza la lista de archivos remotos"""
-        if not self.recurso_montado or not self.transferencia:
-            messagebox.showwarning("Advertencia", "Primero debe montar un recurso NFS")
-            return
-        
-        resultado = self.transferencia.listar_remoto()
-        
-        if resultado['success']:
-            self.lista_remotos.delete(0, tk.END)
-            for item in resultado['items']:
-                icono = Iconos.CARPETA if item['tipo'] == 'directorio' else Iconos.ARCHIVO
-                texto = "{0} {1}".format(icono, item['nombre'])
-                self.lista_remotos.insert(tk.END, texto)
-            self._actualizar_barra_estado("{0} items disponibles".format(len(resultado['items'])), 'info')
-        else:
-            messagebox.showerror("Error", resultado['message'])
-    
-    def _explorar_destino(self):
-        """Explora destino local"""
-        destino = filedialog.askdirectory(title="Seleccione carpeta de destino")
-        if destino:
-            self.entrada_destino_local.delete(0, tk.END)
-            self.entrada_destino_local.insert(0, destino)
-    
-    def _recibir_archivos(self):
-        """Recibe archivos seleccionados"""
-        if not self.recurso_montado or not self.transferencia:
-            messagebox.showwarning("Advertencia", "Primero debe montar un recurso NFS")
-            return
-        
-        seleccion = self.lista_remotos.curselection()
-        if not seleccion:
-            messagebox.showwarning("Advertencia", "Seleccione archivos para recibir")
-            return
-        
-        # Obtener nombres de archivos (quitando el icono)
-        nombres = []
-        for idx in seleccion:
-            texto = self.lista_remotos.get(idx)
-            nombre = texto.split(' ', 1)[1]  # Quitar icono
-            nombres.append(nombre)
-        
-        destino = self.entrada_destino_local.get().strip()
-        
-        resultado = self.transferencia.recibir_multiples(nombres, destino)
-        
-        if resultado['success']:
-            messagebox.showinfo("Éxito", resultado['message'])
-            self._actualizar_barra_estado("Archivos recibidos", 'exito')
-        else:
-            messagebox.showerror("Error", resultado['message'])
     
     # ============== BARRA DE ESTADO ==============
     
