@@ -260,29 +260,50 @@ class VentanaPrincipal:
     
     
     def _montar_carpeta_servidor(self, ruta_local, punto_montaje):
-        """Monta la carpeta exportada en el punto de montaje local del servidor"""
+        """Monta la carpeta exportada como NFS en localhost para que aparezca en df -h"""
         try:
             # Crear punto de montaje si no existe
             if not os.path.exists(punto_montaje):
                 try:
                     os.makedirs(punto_montaje, mode=0o755)
                     logger.info("Punto de montaje creado: {0}".format(punto_montaje))
+                except PermissionError:
+                    return "\n[ADVERTENCIA] No tiene permisos para crear directorio en esa ubicación.\nIntente en /mnt o /home"
                 except Exception as e:
                     return "Error creando punto de montaje: {0}".format(str(e))
             
-            # En el servidor, simplemente crear un binding mount (bind mount)
-            # Esto vincula la carpeta al punto de montaje sin necesidad de NFS
-            comando = "mount --bind {0} {1}".format(ruta_local, punto_montaje)
+            # Montar como NFS en localhost para que aparezca en df -h
+            # Esto aparecerá como montaje NFS separado en df -h
+            comando = 'mount -t nfs -o vers=3 localhost:"{0}" "{1}"'.format(ruta_local, punto_montaje)
+            logger.info("Ejecutando comando NFS de montaje: {0}".format(comando))
             resultado = self.gestor_nfs._run_command(comando)
             
             if resultado["success"]:
-                logger.exito("Carpeta montada en {0}".format(punto_montaje))
-                return "Carpeta montada en: {0}".format(punto_montaje)
+                logger.exito("Carpeta montada como NFS en {0}".format(punto_montaje))
+                return "✓ Carpeta montada como NFS en: {0}\n\nVerifica con:\ndf -h | grep nfs_local\nmount | grep nfs_local".format(punto_montaje)
             else:
-                logger.warning("No se pudo montar localmente, pero la exportación está configurada")
-                return "Exportación lista (montaje local no disponible: {0})".format(resultado['stderr'])
+                stderr = resultado.get('stderr', '').lower()
+                
+                # Mensajes de error específicos
+                if "permission denied" in stderr:
+                    logger.warning("Permiso denegado para montar")
+                    return "\n[ERROR] Permiso denegado.\nAsegúrese de ejecutar como root:\nsudo python3 main.py"
+                elif "already mounted" in stderr or "busy" in stderr:
+                    logger.warning("El punto ya está montado o en uso")
+                    return "\n[ADVERTENCIA] El punto de montaje ya está en uso o ya está montado.\n\nPara desmontar:\nsudo umount {0}".format(punto_montaje)
+                elif "no such file" in stderr or "no such" in stderr:
+                    logger.warning("No se encontró la carpeta a montar o error de NFS")
+                    return "\n[ERROR] No se encontró la ruta o NFS no responde: {0}\n\nVerifique que:\n1. La ruta existe\n2. NFS está activo: systemctl status nfs-server".format(ruta_local)
+                elif "connection refused" in stderr or "no route" in stderr:
+                    logger.warning("No se puede conectar a NFS en localhost")
+                    return "\n[ERROR] NFS no está disponible en localhost.\n\nInicie NFS con:\nsudo systemctl start nfs-server"
+                else:
+                    logger.warning("No se pudo montar como NFS: {0}".format(resultado['stderr']))
+                    return "\n[INFORMACIÓN] Error al montar NFS: {0}\n\nIntente manualmente con:\nsudo mount -t nfs -o vers=3 localhost:\"{1}\" \"{2}\"".format(
+                        resultado['stderr'], ruta_local, punto_montaje)
         except Exception as e:
-            return "Error en montaje local: {0}".format(str(e))
+            logger.error("Error en montaje NFS: {0}".format(str(e)))
+            return "Error en montaje NFS: {0}".format(str(e))
     
     def _actualizar_exportaciones(self):
         """Actualiza la lista de exportaciones"""
