@@ -5,7 +5,7 @@ Se han implementado mejoras significativas en validaciones, compatibilidad con O
 
 ## CAMBIOS RECIENTES - DICIEMBRE 2025
 
-### CORRECCIÓN CRÍTICA: Eliminación de Validaciones Restrictivas
+### CORRECCIÓN CRÍTICA #1: Eliminación de Validaciones Restrictivas
 
 **Problema Reportado**: 
 - Error "access denied by server while mounting" al crear exportaciones
@@ -37,6 +37,45 @@ Se han implementado mejoras significativas en validaciones, compatibilidad con O
    - ✓ Permitir deseleccionar todas las opciones
    - ✓ Permitir cualquier ruta, hosts y configuración
    - ✓ NFS es responsable de validaciones finales
+
+### CORRECCIÓN CRÍTICA #2: Eliminación del Montaje Automático Problemático
+
+**Problema Reportado**:
+- Error "access denied by server while mounting localhost:/home/publica/Documents/2-lectura"
+- El usuario marcaba "Montar en esta máquina", seleccionaba punto de montaje `/mnt/nfs-compartido`
+- Agregaba exportación pero fallaba el montaje automático
+- El montaje intentaba usarse ANTES de ejecutar `exportfs -ra`
+
+**Causa Raíz**:
+- Función `_montar_carpeta_servidor()` intentaba montar con `mount -t nfs` en localhost
+- Esto se ejecutaba inmediatamente después de agregar la línea a `/etc/exports`
+- El servidor NFS aún no había sido actualizado con `exportfs -ra`
+- Resultaba en "access denied" porque la exportación no estaba activa
+
+**Soluciones Implementadas**:
+
+1. **Archivo**: `ui/ventana_principal.py`
+   - ✓ ELIMINADO checkbox "Montar en esta máquina"
+   - ✓ ELIMINADO campo "Punto de Montaje Local:"
+   - ✓ ELIMINADO botón "Explorar..." para punto de montaje
+   - ✓ ELIMINADO función `_montar_carpeta_servidor()` completa (50 líneas)
+   - ✓ ELIMINADO función `_toggle_punto_montaje()` 
+   - ✓ ELIMINADO función `_explorar_punto_montaje_servidor()`
+   - ✓ Simplificado `_agregar_exportacion_servidor()` 
+   - ✓ Eliminada lógica de montaje automático posterior
+
+2. **Nuevo Flujo de Trabajo**:
+   - Paso 1: Ir a "[SRV] Servidor NFS" → agregar exportación → aplicar cambios
+   - Paso 2: Ir a "[CLI] Cliente NFS" → montar desde cliente (en máquina remota o localhost)
+   - ✓ Montaje cliente es independiente y funciona correctamente
+   - ✓ Usuario tiene control total del cuándo y dónde montar
+
+3. **Ventajas**:
+   - ✓ Sin montajes automáticos que fracasen
+   - ✓ Flujo más limpio y predecible
+   - ✓ Usuario aplica cambios explícitamente con "Aplicar Cambios"
+   - ✓ Montaje se realiza DESPUÉS de `exportfs -ra`
+   - ✓ Menos complejidad, menos errores
 
 **Antes vs Después**:
 ```
