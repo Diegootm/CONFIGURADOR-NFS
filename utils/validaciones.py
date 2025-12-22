@@ -138,8 +138,10 @@ def validar_opciones_nfs(opciones):
     if not isinstance(opciones, list):
         return (False, "Las opciones deben ser una lista")
     
+    # Si no hay opciones, NFS usará los valores por defecto
+    # Esto es permitido y es el comportamiento esperado
     if not opciones:
-        return (False, "Debe seleccionar al menos una opción NFS")
+        return (True, "Sin opciones especificadas - Se usarán los valores por defecto de NFS")
     
     # Validar que cada opción sea válida
     opciones_parseadas = []

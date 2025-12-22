@@ -357,18 +357,8 @@ class TabServidor:
         # Recopilar opciones seleccionadas
         opciones = [opt for opt, var in self.opciones_vars.items() if var.get()]
         
-        if not opciones:
-            respuesta = messagebox.askyesno(
-                "Sin Opciones",
-                "No seleccionó ninguna opción NFS.\n\n" +
-                "¿Desea usar la configuración recomendada?\n" +
-                "(rw, sync, no_subtree_check, root_squash)"
-            )
-            
-            if respuesta:
-                opciones = ['rw', 'sync', 'no_subtree_check', 'root_squash']
-            else:
-                return
+        # Si no hay opciones seleccionadas, permitir continuar con los valores por defecto de NFS
+        # El usuario puede deseleccionar todo si lo desea
         
         # Verificar permisos del filesystem
         permisos_ok, mensaje_permisos = self.gestor_nfs.verificar_y_ajustar_permisos(

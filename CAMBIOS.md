@@ -3,6 +3,33 @@
 ## Resumen General
 Se han implementado mejoras significativas en validaciones, compatibilidad con OpenSUSE 15.6 y Python 3.6, así como correcciones importantes para garantizar que las exportaciones se monten correctamente en el equipo. Versión 2.1 incluye montaje automático local en el servidor.
 
+## CAMBIOS RECIENTES (DICIEMBRE 2025)
+
+### Corrección: Flexibilidad en Opciones NFS (CRÍTICA)
+- **Problema**: Al deseleccionar algunas opciones de las configuraciones por defecto, el NFS fallaba con "access denied by server while mounting"
+- **Causa**: Validación excesivamente restrictiva que obligaba a tener al menos una opción
+- **Solución Implementada**:
+  1. **Archivo**: `utils/validaciones.py`
+     - Eliminada validación que requería al menos una opción NFS
+     - Ahora se permite dejar opciones vacías para usar valores por defecto de NFS
+     - El servidor NFS aplicará automáticamente sus valores por defecto
+  
+  2. **Archivo**: `ui/tab_servidor.py`
+     - Eliminado diálogo que forzaba seleccionar configuración recomendada
+     - Ahora el usuario puede deseleccionar todas las opciones sin problema
+     - El montaje procede con los parámetros que el usuario elija
+  
+  3. **Archivo**: `gestor_nfs.py`
+     - Mejorado método `_formatear_linea_exports()` para manejar lista vacía
+     - Sin opciones: formatea como `ruta host`
+     - Con opciones: formatea como `ruta host(opción1,opción2)`
+
+- **Comportamiento Nuevo**:
+  - ✓ Usuario puede deseleccionar todas las opciones
+  - ✓ El montaje se realiza con valores por defecto de NFS
+  - ✓ Mayor flexibilidad para usuarios experimentados
+  - ✓ Ninguna validación restrictiva impide la configuración
+
 ## 1. Validaciones Mejoradas
 
 ### 1.1 Validación de Combinaciones de Opciones NFS

@@ -275,9 +275,14 @@ class GestorNFS:
     def _formatear_linea_exports(self, carpeta, hosts, opciones):
         """
         Formatea una línea para /etc/exports
+        Si no hay opciones, formatea sin paréntesis
         """
-        texto_opciones = ",".join(opciones)
-        return "{0} {1}({2})".format(carpeta, hosts, texto_opciones)
+        if opciones:
+            texto_opciones = ",".join(opciones)
+            return "{0} {1}({2})".format(carpeta, hosts, texto_opciones)
+        else:
+            # Sin opciones - NFS usará sus valores por defecto
+            return "{0} {1}".format(carpeta, hosts)
 
     def _crear_respaldo(self):
         """
