@@ -269,7 +269,7 @@ class VentanaPrincipal:
             return
         
         if self.gestor_nfs.aplicar_cambios_nfs():
-            mensajes = ["Cambios aplicados correctamente con exportfs -ra\n"]
+            mensajes = ["✓ Cambios aplicados correctamente con exportfs -ra\n"]
             
             # Si hay punto de montaje especificado, intentar montar
             punto_montaje = self.entrada_punto_montaje_servidor.get().strip()
@@ -284,13 +284,23 @@ class VentanaPrincipal:
             if punto_montaje and ruta:
                 resultado = self._montar_carpeta_servidor_local(ruta, punto_montaje)
                 mensajes.append(resultado)
-                messagebox.showinfo("Éxito", "\n".join(mensajes))
-            else:
-                messagebox.showinfo("Éxito", "\n".join(mensajes))
             
+            messagebox.showinfo("Éxito", "\n".join(mensajes))
             self._actualizar_barra_estado("Cambios NFS aplicados", 'exito')
         else:
-            messagebox.showerror("Error", "No se pudieron aplicar los cambios")
+            messagebox.showerror(
+                "Error al Aplicar Cambios",
+                "No se pudieron aplicar los cambios.\n\n" +
+                "SOLUCIÓN:\n" +
+                "Ejecute la aplicación con permisos de root:\n\n" +
+                "sudo python3 main.py\n\n" +
+                "O configure sudoers para permitir comandos sin contraseña:\n" +
+                "sudo visudo\n" +
+                "# Agregue al final:\n" +
+                "%sudo ALL=(ALL) NOPASSWD: /usr/sbin/exportfs\n" +
+                "%sudo ALL=(ALL) NOPASSWD: /bin/mount\n" +
+                "%sudo ALL=(ALL) NOPASSWD: /bin/umount"
+            )
     
     def _montar_carpeta_servidor_local(self, ruta_local, punto_montaje):
         """Monta con NFS en localhost DESPUÉS de exportfs -ra (ahora sí funciona)"""
@@ -300,7 +310,7 @@ class VentanaPrincipal:
                 try:
                     os.makedirs(punto_montaje, mode=0o755)
                 except PermissionError:
-                    return "[ADVERTENCIA] Sin permisos para crear directorio. Intente en /home"
+                    return "[ADVERTENCIA] Sin permisos para crear directorio. Intente en /home o /mnt"
                 except Exception as e:
                     return "Error creando punto: {0}".format(str(e))
             
@@ -314,10 +324,21 @@ class VentanaPrincipal:
                 return "\n✓ Montaje NFS exitoso en: {0}\n  Verifica con: df -h | grep nfs".format(punto_montaje)
             else:
                 stderr = resultado.get('stderr', '').lower()
-                if "already mounted" in stderr or "busy" in stderr:
+                
+                # Mensajes de error más específicos
+                if "sudo: a password is required" in stderr or "no password" in stderr:
+                    return "\n[ERROR] Se requieren permisos de root.\n\n" +\
+                           "Ejecute: sudo python3 main.py\n\n" +\
+                           "O configure sudoers (sin contraseña):\n" +\
+                           "sudo visudo → agregue al final:\n" +\
+                           "%sudo ALL=(ALL) NOPASSWD: /bin/mount"
+                elif "already mounted" in stderr or "busy" in stderr:
                     return "\n[ADVERTENCIA] Punto de montaje ya está en uso.\nPara desmontar: sudo umount {0}".format(punto_montaje)
                 elif "permission denied" in stderr or "access denied" in stderr:
-                    return "\n[ERROR] Permiso denegado. Asegúrese de ejecutar como root: sudo python3 main.py"
+                    return "\n[ERROR] Permiso denegado. Ejecute como root: sudo python3 main.py"
+                elif "no such file" in stderr or "not found" in stderr:
+                    return "\n[ERROR] Ruta no encontrada o NFS no responde.\n" +\
+                           "Verifique que exportfs -ra se ejecutó correctamente."
                 else:
                     return "\n[ERROR] Error al montar: {0}".format(resultado.get('stderr', 'desconocido'))
         except Exception as e:

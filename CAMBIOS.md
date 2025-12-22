@@ -5,6 +5,56 @@ Se han implementado mejoras significativas en validaciones, compatibilidad con O
 
 ## CAMBIOS RECIENTES - DICIEMBRE 2025
 
+### CORRECCIÓN: Permisos de Sudo y Manejo de Errores
+
+**Problema Reportado**:
+- Error "main.py necesita permisos de sudo" al intentar aplicar segunda exportación
+- Problema de permisos intermitentes al ejecutar comandos
+
+**Causa Raíz**:
+- `_run_command()` no manejaba correctamente los errores de sudo
+- `sudo` sin `-n` podía pedir contraseña interactivamente
+- Mensajes de error no eran informativos
+
+**Soluciones Implementadas**:
+
+1. **Archivo**: `gestor_nfs.py` - Función `_run_command()`
+   - ✓ Ahora usa `sudo -n` (non-interactive) para no pedir contraseña
+   - ✓ Detecta errores de permisos y sugiere soluciones
+   - ✓ Agregado timeout de 30 segundos para evitar bloqueos
+   - ✓ Mensajes de error claros con instrucciones
+
+2. **Archivo**: `ui/ventana_principal.py` - Función `_aplicar_cambios_nfs()`
+   - ✓ Mensajes de error mejorados
+   - ✓ Sugiere ejecutar con: `sudo python3 main.py`
+   - ✓ O configurar sudoers para no requerir contraseña
+
+3. **Archivo**: `ui/ventana_principal.py` - Función `_montar_carpeta_servidor_local()`
+   - ✓ Detecta errores de permisos específicos
+   - ✓ Proporciona instrucciones exactas de cómo resolver
+   - ✓ Distingue entre diferentes tipos de error
+
+4. **Archivo**: `README.md`
+   - ✓ Agregada sección "Instalación y Ejecución"
+   - ✓ Dos opciones: como root o configurar sudoers
+   - ✓ Explicación de por qué necesita permisos
+
+**Soluciones Recomendadas**:
+
+Opción A (Más simple):
+```bash
+sudo python3 main.py
+```
+
+Opción B (Sin contraseña):
+```bash
+sudo visudo
+# Agregue al final:
+%sudo ALL=(ALL) NOPASSWD: /usr/sbin/exportfs
+%sudo ALL=(ALL) NOPASSWD: /bin/mount
+%sudo ALL=(ALL) NOPASSWD: /bin/umount
+```
+
 ### CORRECCIÓN CRÍTICA #1: Eliminación de Validaciones Restrictivas
 
 **Problema Reportado**: 

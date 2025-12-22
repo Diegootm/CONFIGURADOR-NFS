@@ -51,11 +51,13 @@ class GestorNFS:
 
     def _run_command(self, command):
         """
-        Ejecuta un comando del sistema
+        Ejecuta un comando del sistema con sudo si es necesario
+        Usa sudo -n para no pedir contraseña interactivamente
         """
         try:
+            # Si no somos root, agregar sudo -n (non-interactive)
             if not self.es_root and not command.startswith("sudo"):
-                command = "sudo {0}".format(command)
+                command = "sudo -n {0}".format(command)
             
             result = subprocess.run(
                 command,
@@ -63,11 +65,31 @@ class GestorNFS:
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                universal_newlines=True
+                universal_newlines=True,
+                timeout=30
             )
             return {"success": True, "stdout": result.stdout, "stderr": result.stderr}
         except subprocess.CalledProcessError as e:
+            stderr_lower = str(e.stderr).lower()
+            
+            # Si falla por sudo no-password, dar instrucción clara
+            if "sudo: a password is required" in stderr_lower or "no password" in stderr_lower:
+                mensaje_error = "Se requieren permisos de root.\n\n" +\
+                               "Ejecute la aplicación como:\n" +\
+                               "sudo python3 main.py\n\n" +\
+                               "O configure sudoers para permitir estos comandos sin contraseña:\n" +\
+                               "sudo visudo\n" +\
+                               "# Agregue estas líneas al final:\n" +\
+                               "%sudo ALL=(ALL) NOPASSWD: /usr/sbin/exportfs\n" +\
+                               "%sudo ALL=(ALL) NOPASSWD: /bin/mount\n" +\
+                               "%sudo ALL=(ALL) NOPASSWD: /bin/umount"
+                return {"success": False, "stdout": e.stdout, "stderr": mensaje_error}
+            
             return {"success": False, "stdout": e.stdout, "stderr": e.stderr}
+        except subprocess.TimeoutExpired:
+            return {"success": False, "stdout": "", "stderr": "Comando tardó demasiado (timeout)"}
+        except Exception as e:
+            return {"success": False, "stdout": "", "stderr": str(e)}
 
     def obtener_descripcion_opcion(self, opcion):
         """Retorna la descripción de una opción NFS"""

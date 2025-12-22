@@ -103,7 +103,42 @@ configurador-nfs
 
 Busca "Configurador NFS" en el menú de aplicaciones de tu escritorio.
 
-## 📖 Guía de Uso
+## � Instalación y Ejecución
+
+### Opción 1: Ejecutar como root (Recomendado para máxima compatibilidad)
+```bash
+sudo python3 main.py
+```
+
+### Opción 2: Configurar sudo sin contraseña (Para usuarios experimentados)
+
+Para evitar que pida contraseña cada vez que ejecute comandos, configure sudoers:
+
+```bash
+sudo visudo
+```
+
+Agregue estas líneas al **final del archivo**:
+```sudoers
+# Permitir comandos NFS sin contraseña
+%sudo ALL=(ALL) NOPASSWD: /usr/sbin/exportfs
+%sudo ALL=(ALL) NOPASSWD: /bin/mount
+%sudo ALL=(ALL) NOPASSWD: /bin/umount
+%sudo ALL=(ALL) NOPASSWD: /usr/sbin/nfs-server
+%sudo ALL=(ALL) NOPASSWD: /bin/systemctl
+```
+
+Luego ejecute normalmente:
+```bash
+python3 main.py
+```
+
+### ¿Por qué necesita permisos de root?
+- **exportfs**: Para actualizar la tabla de exportaciones NFS
+- **mount/umount**: Para montar y desmontar recursos
+- **systemctl**: Para iniciar/detener el servicio NFS
+
+## �📖 Guía de Uso
 
 ### Configurar Servidor NFS (Flujo Correcto)
 
