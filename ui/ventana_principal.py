@@ -293,7 +293,7 @@ class VentanaPrincipal:
             messagebox.showerror("Error", "No se pudieron aplicar los cambios")
     
     def _montar_carpeta_servidor_local(self, ruta_local, punto_montaje):
-        """Monta localmente con binding mount después de exportfs -ra"""
+        """Monta con NFS en localhost DESPUÉS de exportfs -ra (ahora sí funciona)"""
         try:
             # Crear punto de montaje si no existe
             if not os.path.exists(punto_montaje):
@@ -304,22 +304,24 @@ class VentanaPrincipal:
                 except Exception as e:
                     return "Error creando punto: {0}".format(str(e))
             
-            # Usar binding mount que es más simple y directo
-            comando = 'mount --bind "{0}" "{1}"'.format(ruta_local, punto_montaje)
-            logger.info("Montando localmente: {0}".format(comando))
+            # Montar como NFS en localhost (ahora funciona porque exportfs -ra ya se ejecutó)
+            comando = 'mount -t nfs localhost:"{0}" "{1}"'.format(ruta_local, punto_montaje)
+            logger.info("Montando NFS localmente: {0}".format(comando))
             resultado = self.gestor_nfs._run_command(comando)
             
             if resultado["success"]:
-                logger.exito("Carpeta montada en {0}".format(punto_montaje))
-                return "\n✓ Montaje local exitoso en: {0}".format(punto_montaje)
+                logger.exito("Montaje NFS exitoso en {0}".format(punto_montaje))
+                return "\n✓ Montaje NFS exitoso en: {0}\n  Verifica con: df -h | grep nfs".format(punto_montaje)
             else:
                 stderr = resultado.get('stderr', '').lower()
                 if "already mounted" in stderr or "busy" in stderr:
                     return "\n[ADVERTENCIA] Punto de montaje ya está en uso.\nPara desmontar: sudo umount {0}".format(punto_montaje)
+                elif "permission denied" in stderr or "access denied" in stderr:
+                    return "\n[ERROR] Permiso denegado. Asegúrese de ejecutar como root: sudo python3 main.py"
                 else:
                     return "\n[ERROR] Error al montar: {0}".format(resultado.get('stderr', 'desconocido'))
         except Exception as e:
-            logger.error("Error en montaje local: {0}".format(str(e)))
+            logger.error("Error en montaje NFS: {0}".format(str(e)))
             return "Error: {0}".format(str(e))
     
     

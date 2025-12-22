@@ -48,9 +48,10 @@ Se han implementado mejoras significativas en validaciones, compatibilidad con O
 **Solución Implementada**:
 
 1. **Archivo**: `ui/ventana_principal.py` - Nueva función `_montar_carpeta_servidor_local()`
-   - ✓ Creada función que ejecuta `mount --bind` en lugar de NFS
-   - ✓ Binding mount es más simple y directo para montajes locales
-   - ✓ Se ejecuta DESPUÉS de `exportfs -ra` exitoso
+   - ✓ Usa `mount -t nfs localhost:/ruta /punto` para que aparezca en `df -h`
+   - ✓ CRUCIAL: Se ejecuta DESPUÉS de `exportfs -ra` exitoso
+   - ✓ Ahora funciona correctamente porque la exportación ya está activa
+   - ✓ El montaje NFS aparecerá visible en `df -h`
 
 2. **Archivo**: `ui/ventana_principal.py` - Modificación de `_aplicar_cambios_nfs()`
    - ✓ Ahora ejecuta `exportfs -ra` primero
@@ -82,8 +83,9 @@ Se han implementado mejoras significativas en validaciones, compatibilidad con O
    → SOLO agrega a /etc/exports, NO intenta montar
    
    PASO 6: Aplicar Cambios (AQUÍ OCURRE EL MONTAJE)
-   → Ejecuta: exportfs -ra
-   → Luego: mount --bind /ruta /punto_montaje
+   → Paso 1: Ejecuta: exportfs -ra (activa la exportación)
+   → Paso 2: Ejecuta: mount -t nfs localhost:/ruta /punto (monta como NFS)
+   → Paso 3: Aparece en 'df -h' como montaje NFS
    ```
 
 5. **Ventajas del nuevo flujo**:
