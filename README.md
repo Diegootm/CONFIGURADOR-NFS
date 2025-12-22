@@ -105,37 +105,53 @@ Busca "Configurador NFS" en el menú de aplicaciones de tu escritorio.
 
 ## 📖 Guía de Uso
 
-### Configurar Servidor NFS
+### Configurar Servidor NFS (Flujo Correcto)
 
+**Paso 1: Seleccionar qué compartir**
 1. Ve a la pestaña **"[SRV] Servidor NFS"**
-2. Haz clic en "Explorar" para seleccionar una **carpeta** (solo carpetas, no archivos)
-3. Especifica los hosts permitidos (ej: `192.168.1.0/24` o `*`)
-4. Selecciona las opciones NFS deseadas (puedes seleccionar solo `rw` si quieres)
-5. Haz clic en "Agregar Exportación"
-6. **IMPORTANTE**: Haz clic en "Aplicar Cambios" para activar la exportación
+2. Haz clic en "Explorar" y selecciona una **carpeta** (ej: `/home/publica/Documents/2-lectura`)
 
-**Ejemplo de flujo correcto**:
-- Carpeta a compartir: `/home/publica/Documents/2-lectura`
-- Hosts permitidos: `*` (para que todos puedan acceder)
-- Opciones: Marcar solo `rw` (lectura/escritura)
-- Clic: "Agregar Exportación" → Mensaje "Exportación agregada correctamente"
-- Clic: "Aplicar Cambios" → Ejecuta `exportfs -ra` para activar
+**Paso 2: Seleccionar con quién**
+3. En "Hosts Permitidos" especifica quiénes pueden acceder (ej: `*` para todos, o `192.168.1.0/24`)
 
-### Montar Recurso NFS (Cliente)
+**Paso 3: Seleccionar dónde montarlo (opcional)**
+4. En "Punto de Montaje (opcional)" ingresa dónde se montará localmente (ej: `/mnt/nfs-compartido`)
+   - Puedes escribir la ruta o usar "Explorar" para seleccionar
+   - Si dejas vacío, NO se montará localmente (solo se exporta)
+
+**Paso 4: Opciones NFS**
+5. Selecciona las opciones que necesites (ej: solo marcar `rw` para lectura/escritura)
+
+**Paso 5: Agregar y Aplicar**
+6. Clic en **"Agregar Exportación"** → se agrega a `/etc/exports`
+7. **Clic en "Aplicar Cambios"** → se ejecuta `exportfs -ra` y SE MONTA AQUÍ
+
+**Ejemplo completo**:
+```
+Ruta a Exportar: /home/publica/Documents/2-lectura
+Hosts Permitidos: *
+Punto de Montaje: /mnt/nfs-compartido
+Opciones NFS: [✓] rw
+→ Agregar Exportación
+→ Aplicar Cambios (AQUÍ se monta)
+```
+
+### Montar Recurso NFS desde Cliente Remoto
+
+Si quieres montar desde OTRA MÁQUINA en la red:
 
 1. Ve a la pestaña **"[CLI] Cliente NFS"**
-2. Ingresa la IP del servidor NFS (ej: `192.168.1.100` o `localhost`)
-3. Especifica la ruta remota a montar (ej: `/home/publica/Documents/2-lectura`)
-4. Define el punto de montaje local (ej: `/mnt/nfs_compartido`)
-5. Haz clic en "Montar"
-6. El sistema intenta automáticamente NFS v3 para compatibilidad con OpenSUSE 15.6
+2. IP del Servidor: ingresa la IP o hostname del servidor (ej: `192.168.1.100` o `localhost`)
+3. Ruta Remota: ingresa la ruta que está exportada (ej: `/home/publica/Documents/2-lectura`)
+4. Punto de Montaje: ingresa dónde montarlo en tu máquina (ej: `/mnt/nfs_compartido`)
+5. Clic en **"Montar"**
 
 ### Acceder a Archivos Compartidos
 
-Una vez montado, simplemente:
+Una vez montado (ya sea desde servidor o cliente):
 1. Accede a los archivos como si fueran una carpeta local
-2. Copiar/mover archivos usando el navegador de archivos
-3. Trabajar con los archivos como si estuvieran en tu máquina
+2. Copia/mueve archivos usando el navegador de archivos
+3. Trabaja con los archivos normalmente
 
 
 ## ⚙️ Configuración Recomendada
