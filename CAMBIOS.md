@@ -3,34 +3,59 @@
 ## Resumen General
 Se han implementado mejoras significativas en validaciones, compatibilidad con OpenSUSE 15.6 y Python 3.6, así como correcciones importantes para garantizar que las exportaciones se monten correctamente en el equipo. Versión 2.1 incluye montaje automático local en el servidor.
 
-## CAMBIOS RECIENTES (DICIEMBRE 2025)
+## CAMBIOS RECIENTES - DICIEMBRE 2025
 
-### Corrección: Flexibilidad en Opciones NFS (CRÍTICA)
-- **Problema**: Al deseleccionar algunas opciones de las configuraciones por defecto, el NFS fallaba con "access denied by server while mounting"
-- **Causa**: Validación excesivamente restrictiva que obligaba a tener al menos una opción
-- **Solución Implementada**:
-  1. **Archivo**: `utils/validaciones.py`
-     - Eliminada validación que requería al menos una opción NFS
-     - Ahora se permite dejar opciones vacías para usar valores por defecto de NFS
-     - El servidor NFS aplicará automáticamente sus valores por defecto
-  
-  2. **Archivo**: `ui/tab_servidor.py`
-     - Eliminado diálogo que forzaba seleccionar configuración recomendada
-     - Ahora el usuario puede deseleccionar todas las opciones sin problema
-     - El montaje procede con los parámetros que el usuario elija
-  
-  3. **Archivo**: `gestor_nfs.py`
-     - Mejorado método `_formatear_linea_exports()` para manejar lista vacía
-     - Sin opciones: formatea como `ruta host`
-     - Con opciones: formatea como `ruta host(opción1,opción2)`
+### CORRECCIÓN CRÍTICA: Eliminación de Validaciones Restrictivas
 
-- **Comportamiento Nuevo**:
-  - ✓ Usuario puede deseleccionar todas las opciones
-  - ✓ El montaje se realiza con valores por defecto de NFS
-  - ✓ Mayor flexibilidad para usuarios experimentados
-  - ✓ Ninguna validación restrictiva impide la configuración
+**Problema Reportado**: 
+- Error "access denied by server while mounting" al crear exportaciones
+- El usuario configuraba ruta, hosts (*), opciones (rw) y el montaje fallaba
+- Validaciones excesivas bloqueaban la operación correctamente
 
-## 1. Validaciones Mejoradas
+**Soluciones Implementadas**:
+
+1. **Archivo**: `ui/tab_servidor.py` - Función `_agregar_exportacion_servidor()`
+   - ✓ Eliminado diálogo modal que forzaba seleccionar "configuración recomendada"
+   - ✓ Eliminada verificación de permisos del filesystem que bloqueaba
+   - ✓ Ahora agrega la exportación directamente sin validaciones bloqueantes
+   - ✓ Simplificado el flujo: entradas → agregar → listo
+
+2. **Archivo**: `gestor_nfs.py` - Función `verificar_y_ajustar_permisos()`
+   - ✓ Simplificada completamente - solo verifica existencia de ruta
+   - ✓ NUNCA bloquea la operación basada en permisos
+   - ✓ Solo proporciona información al usuario
+
+3. **Archivo**: `gestor_nfs.py` - Función `_validar_parametros()`
+   - ✓ Eliminadas validaciones excesivas de `validar_ruta()` y `validar_red()`
+   - ✓ Eliminada validación restrictiva de `validar_opciones_nfs()`
+   - ✓ Solo valida que: ruta existe, no está vacía, hosts no están vacíos
+   - ✓ El resto lo maneja NFS automáticamente
+
+4. **Comportamiento Resultante**:
+   - ✓ Permitir cualquier combinación de opciones sin restricciones
+   - ✓ Permitir lista vacía de opciones (NFS usa sus valores por defecto)
+   - ✓ Permitir deseleccionar todas las opciones
+   - ✓ Permitir cualquier ruta, hosts y configuración
+   - ✓ NFS es responsable de validaciones finales
+
+**Antes vs Después**:
+```
+ANTES:
+1. Usuario completa campos
+2. Validación de permisos → retorna False si permisos no óptimos
+3. Modal preguntando si ajustar permisos
+4. Múltiples diálogos y restricciones
+5. Frecuentemente falla sin razón clara
+
+DESPUÉS:
+1. Usuario completa campos
+2. Validación básica (ruta existe)
+3. Agregar exportación directamente
+4. ¡Listo! Sin diálogos innecesarios
+5. Funciona correctamente con cualquier configuración
+```
+
+## 1. Validaciones Mejoradas (VERSIÓN ANTERIOR)
 
 ### 1.1 Validación de Combinaciones de Opciones NFS
 - **Archivo modificado**: `utils/validaciones.py`

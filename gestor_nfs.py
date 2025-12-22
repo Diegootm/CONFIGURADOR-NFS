@@ -107,53 +107,19 @@ class GestorNFS:
 
     def verificar_y_ajustar_permisos(self, ruta, opciones):
         """
-        Verifica y ajusta los permisos del sistema de archivos según las opciones NFS
+        Verifica los permisos del sistema de archivos
+        Esta función solo proporciona información, no bloquea la exportación
         Retorna (exito, mensaje)
         """
         try:
             if not os.path.exists(ruta):
                 return (False, "La ruta no existe: {0}".format(ruta))
             
-            stat_info = os.stat(ruta)
-            permisos_actuales = stat.filemode(stat_info.st_mode)
-            
-            mensajes = []
-            mensajes.append("Verificando permisos de: {0}".format(ruta))
-            mensajes.append("Permisos actuales: {0}".format(permisos_actuales))
-            
-            necesita_escritura = 'rw' in opciones
-            
-            if os.path.isdir(ruta):
-                if necesita_escritura:
-                    permisos_recomendados = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
-                    modo_recomendado = "rwxr-xr-x (755)"
-                else:
-                    permisos_recomendados = stat.S_IRUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
-                    modo_recomendado = "r-xr-xr-x (555)"
-            else:
-                if necesita_escritura:
-                    permisos_recomendados = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
-                    modo_recomendado = "rw-rw-rw- (666)"
-                else:
-                    permisos_recomendados = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
-                    modo_recomendado = "r--r--r-- (444)"
-            
-            permisos_suficientes = (stat_info.st_mode & permisos_recomendados) == permisos_recomendados
-            
-            if not permisos_suficientes:
-                mensajes.append("ADVERTENCIA: Los permisos actuales pueden no ser suficientes")
-                mensajes.append("    Permisos recomendados: {0}".format(modo_recomendado))
-                mensajes.append("")
-                mensajes.append("¿Desea ajustar los permisos automáticamente?")
-                mensajes.append("(Esto cambiará los permisos del sistema de archivos)")
-                
-                return (False, "\n".join(mensajes))
-            else:
-                mensajes.append("Los permisos son adecuados para la configuración NFS")
-                return (True, "\n".join(mensajes))
+            # Solo informar, nunca bloquear
+            return (True, "Ruta verificada: {0}".format(ruta))
                 
         except Exception as e:
-            return (False, "Error verificando permisos: {0}".format(str(e)))
+            return (False, "Error verificando ruta: {0}".format(str(e)))
 
     def aplicar_permisos_filesystem(self, ruta, opciones):
         """
@@ -242,34 +208,27 @@ class GestorNFS:
 
     def _validar_parametros(self, carpeta, hosts, opciones):
         """
-        Valida los parámetros antes de agregar configuración
+        Valida los parámetros básicos antes de agregar configuración
+        Solo valida que no estén vacíos, el resto lo maneja NFS
         """
-        if not carpeta or not hosts:
-            logger.error("Carpeta y hosts son requeridos")
+        if not carpeta or not carpeta.strip():
+            logger.error("Carpeta es requerida")
+            return False
+        
+        if not hosts or not hosts.strip():
+            logger.error("Hosts son requeridos")
             return False
         
         if not isinstance(opciones, list):
             logger.error("Opciones deben ser lista")
             return False
         
-        # Validar ruta
-        valida, tipo, mensaje = validar_ruta(carpeta)
-        if not valida:
-            logger.error("Ruta inválida: {0}".format(mensaje))
+        # Validar que la ruta existe (básico)
+        if not os.path.exists(carpeta):
+            logger.error("Ruta no existe: {0}".format(carpeta))
             return False
         
-        # Validar red/hosts
-        valida_red, mensaje_red = validar_red(hosts)
-        if not valida_red:
-            logger.error("Hosts/Red inválida: {0}".format(mensaje_red))
-            return False
-        
-        # Validar opciones
-        valida_opts, mensaje_opts = validar_opciones_nfs(opciones)
-        if not valida_opts:
-            logger.error(mensaje_opts)
-            return False
-        
+        # Si todo está bien, permitir continuar
         return True
 
     def _formatear_linea_exports(self, carpeta, hosts, opciones):

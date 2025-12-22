@@ -357,35 +357,9 @@ class TabServidor:
         # Recopilar opciones seleccionadas
         opciones = [opt for opt, var in self.opciones_vars.items() if var.get()]
         
-        # Si no hay opciones seleccionadas, permitir continuar con los valores por defecto de NFS
-        # El usuario puede deseleccionar todo si lo desea
-        
-        # Verificar permisos del filesystem
-        permisos_ok, mensaje_permisos = self.gestor_nfs.verificar_y_ajustar_permisos(
-            ruta, opciones
-        )
-        
-        ajustar_permisos = False
-        if not permisos_ok:
-            respuesta = messagebox.askyesnocancel(
-                "Verificación de Permisos",
-                mensaje_permisos + "\n\n" +
-                "¿Desea ajustar los permisos automáticamente?\n\n" +
-                "SÍ: Ajustar permisos (recomendado)\n" +
-                "NO: Continuar sin ajustar (puede causar errores)\n" +
-                "CANCELAR: Abortar operación"
-            )
-            
-            if respuesta is None:  # Cancelar
-                return
-            elif respuesta:  # Sí
-                ajustar_permisos = True
-        
-        # Agregar configuración
-        if self.gestor_nfs.agregar_configuracion(ruta, hosts, opciones, ajustar_permisos):
+        # Agregar configuración directamente sin validaciones restrictivas
+        if self.gestor_nfs.agregar_configuracion(ruta, hosts, opciones, ajustar_permisos=False):
             mensaje = "Exportación agregada correctamente\n\n"
-            if ajustar_permisos:
-                mensaje += "Permisos del filesystem ajustados\n\n"
             mensaje += "IMPORTANTE: Debe aplicar los cambios para que tengan efecto"
             
             messagebox.showinfo("Éxito", mensaje)
